@@ -31,6 +31,7 @@ function helpPanel(){
   echo -e "\t${purpleColour}d)${endColour} ${grayColour}Buscar por la dificultad de una maquina (Fácil, Media, Difícil, Insane)${endColour}"
   echo -e "\t${purpleColour}o)${endColour} ${grayColour}Buscar por el sistema operativo${endColour}"
   echo -e "\t${purpleColour}y)${endColour} ${grayColour}Optener link de la resolucion de la máquina en youtube${endColour}"
+  echo -e "\t${purpleColour}s)${endColour} ${grayColour}Buscar por Skill${endColour}"
   echo -e "\t${purpleColour}h)${endColour} ${grayColour}Mostrar este panel de ayuda${endColour}\n"
 }
 
@@ -142,6 +143,21 @@ function getDificultadOsMachine(){
 
 }
 
+function getSkills (){
+  skill="$1"
+  check_skill="$(cat bundle.js | grep "skills: " -B 6 | grep "$skill" -i -B 6 | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | sort | column)"
+  
+  if [ "$check_skill" ]; then
+    echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Las maquinas donde se toca la Skill${endColour} ${blueColour}$skill${endColour} ${grayColour}son:${endColour}\n"
+
+    echo -e "$check_skill"
+  else
+    echo -e "\n${redColour}[!] No se encuentran maquinas con la siguiente $skill ${endColour}\n"
+  fi
+}
+
+
+
 # Indicadores
 
 declare -i parameter_counter=0 #-i indica que es un integer
@@ -152,7 +168,7 @@ declare -i chivato_dificultad=0
 declare -i chivato_os=0
 
 #Con esto hacemos un menu llamando al script y pasandole -m para ver una maquina o -h para ver un panel de ayuda
-while getopts "m:ui:d:o:y:h" arg; do #se pone los : cuando el parametro va a recibir algun argumento en este caso -m "pepito"
+while getopts "m:ui:d:o:y:s:h" arg; do #se pone los : cuando el parametro va a recibir algun argumento en este caso -m "pepito"
   case $arg in
     m) machineName="$OPTARG"; let parameter_counter+=1;; #Con OPTARG permito que se ingrese el nombre que se va a buscar -m Tentacle por ejemplo
     u) let parameter_counter+=2;;
@@ -160,6 +176,7 @@ while getopts "m:ui:d:o:y:h" arg; do #se pone los : cuando el parametro va a rec
     d) dificultad="$OPTARG"; chivato_dificultad=1; let parameter_counter+=4;;
     o) os="$OPTARG"; chivato_os=1; let parameter_counter+=5;;
     y) machineName="$OPTARG"; let parameter_counter+=6;;
+    s) skill="$OPTARG"; let parameter_counter+=7;;
     h) ;;  
   esac
 done
@@ -184,6 +201,9 @@ elif [ $parameter_counter -eq 6 ]; then
 
 elif [ $chivato_dificultad -eq 1 ] && [ $chivato_os -eq 1 ]; then
   getDificultadOsMachine $dificultad $os
+
+elif [ $parameter_counter -eq 7 ]; then
+  getSkills "$skill" #entre comillas consigo que pueda poner dos palabras y las recoja, porejem "Active Directory"
 
 else
   helpPanel
