@@ -28,7 +28,8 @@ function helpPanel(){
   echo -e "\t${purpleColour}u)${endColour} ${grayColour}Descargar o actualizar archivos necesarios${endColour}"
   echo -e "\t${purpleColour}m)${endColour} ${grayColour}Buscar por un nombre de maquina${endColour}"
   echo -e "\t${purpleColour}i)${endColour} ${grayColour}Buscar por direccion IP${endColour}"
-  echo -e "\t${purpleColour}d)${endColour} ${grayColour}Buscar por la dificultad de una maquina${endColour}"
+  echo -e "\t${purpleColour}d)${endColour} ${grayColour}Buscar por la dificultad de una maquina (Fácil, Media, Difícil, Insane)${endColour}"
+  echo -e "\t${purpleColour}o)${endColour} ${grayColour}Buscar por el sistema operativo${endColour}"
   echo -e "\t${purpleColour}y)${endColour} ${grayColour}Optener link de la resolucion de la máquina en youtube${endColour}"
   echo -e "\t${purpleColour}h)${endColour} ${grayColour}Mostrar este panel de ayuda${endColour}\n"
 }
@@ -92,7 +93,7 @@ function searchIP(){
 }
 
 function getYoutubeLink(){
- machineName="$1"
+ machineName="$1"         #Recuerda el awk /name: /,/resuelta:/ esto va a coger todo lo que haya entre medias de name: y resuelta:
  youtubeLink_check="$(cat bundle.js | awk "/name: \"$machineName\"/,/resuelta:/" | grep -vE "id:|sku:|resuelta" | tr -d '"' | tr -d ',' | sed 's/^ *//' | grep youtube | awk 'NF{print $NF}')"
  
  if [ "$youtubeLink_check" ]; then
@@ -104,7 +105,7 @@ function getYoutubeLink(){
 
 function searchDificultad(){
   dificultad="$1"
-  dificultad_check="$(cat bundle.js | grep "dificultad: \"$dificultad\"" -B 5 | grep name | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | column)"
+  dificultad_check="$(cat bundle.js | grep "dificultad: \"$dificultad\"" -B 5 | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | column)"
  
  if [ "$dificultad_check" ]; then
    echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Las maquinas de dificultad${endColour} ${greenColour}$dificultad${endColour} ${grayColour}son:${endColour}\n"
@@ -113,6 +114,31 @@ function searchDificultad(){
    echo -e "\n${redColour}[!] La dificuktad introducida no existe${endColour}"
  fi
   
+}
+
+function getOsMachine(){
+  os="$1"
+  os_check="$(cat bundle.js | grep "so: \"$os\"" -B 5 | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d ',' | sort | column)"
+   
+  if [ "$os_check" ]; then
+   echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Las maquinas con sistema operativo${endColour} ${blueColour}$os${endColour} ${grayColour}son:${endColour}\n"
+   echo -e "$os_check"
+  else
+   echo -e "\n${redColour}[!] El sistema operativo introducido no existe${endColour}\n"
+  fi  
+}
+
+function getDificultadOsMachine(){
+  dificultad="$1"
+  os="$2"
+  maquinasDiffOs="$(cat bundle.js | grep "so: \"$os\"" -C 4 | grep "dificultad: \"$dificultad\"" -B 5 | grep "name: " | awk 'NF{print $NF}' | tr -d '"' | tr -d "," | sort | column)"
+
+  if [ "$dificultad" ] && [ "$os" ]; then
+   echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Las maquinas de nivel ${endColour} ${blueColour}$dificultad${endColour} y con sistema operativo ${blueColour}$os${endColour} ${grayColour}son:${endColour}\n"
+   echo -e "\n$maquinasDiffOs\n"
+  else
+   echo -e "\n${redColour}[!] El sistema operativo introducido o la dificultad no existe${endColour}\n"
+  fi  
 
 }
 
@@ -120,29 +146,45 @@ function searchDificultad(){
 
 declare -i parameter_counter=0 #-i indica que es un integer
 
+# Chivatos
+
+declare -i chivato_dificultad=0
+declare -i chivato_os=0
 
 #Con esto hacemos un menu llamando al script y pasandole -m para ver una maquina o -h para ver un panel de ayuda
-while getopts "m:ui:d:y:h" arg; do #se pone los : cuando el parametro va a recibir algun argumento en este caso -m "pepito"
+while getopts "m:ui:d:o:y:h" arg; do #se pone los : cuando el parametro va a recibir algun argumento en este caso -m "pepito"
   case $arg in
     m) machineName="$OPTARG"; let parameter_counter+=1;; #Con OPTARG permito que se ingrese el nombre que se va a buscar -m Tentacle por ejemplo
     u) let parameter_counter+=2;;
     i) ipAdress="$OPTARG"; let parameter_counter+=3;;
-    d) dificultad="$OPTARG"; let parameter_counter+=4;;
-    y) machineName="$OPTARG"; let parameter_counter+=5;;
+    d) dificultad="$OPTARG"; chivato_dificultad=1; let parameter_counter+=4;;
+    o) os="$OPTARG"; chivato_os=1; let parameter_counter+=5;;
+    y) machineName="$OPTARG"; let parameter_counter+=6;;
     h) ;;  
   esac
 done
 
 if [ $parameter_counter -eq 1 ]; then
   searchMachine $machineName
+
 elif [ $parameter_counter -eq 2 ]; then
   updateFiles
+
 elif [ $parameter_counter -eq 3 ]; then
   searchIP $ipAdress
+
 elif [ $parameter_counter -eq 4 ]; then
   searchDificultad $dificultad
+
 elif [ $parameter_counter -eq 5 ]; then
+  getOsMachine $os
+
+elif [ $parameter_counter -eq 6 ]; then
   getYoutubeLink $machineName
+
+elif [ $chivato_dificultad -eq 1 ] && [ $chivato_os -eq 1 ]; then
+  getDificultadOsMachine $dificultad $os
+
 else
   helpPanel
 fi
